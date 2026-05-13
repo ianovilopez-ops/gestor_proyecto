@@ -1,0 +1,30 @@
+﻿{
+  "name": "nexusflow-realtime-service",
+  "version": "1.0.0",
+  "description": "Microservicio de tiempo real para NexusFlow",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "socket.io",
+    "websockets",
+    "microservice",
+    "nexusflow"
+  ],
+  "author": "NexusFlow Team",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.1",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
