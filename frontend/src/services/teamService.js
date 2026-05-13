@@ -1,10 +1,10 @@
 import axios from "axios";
+import { getToken } from "./authService";
 
 const API_URL = "http://localhost:3000/api";
 
 function getAuthHeaders() {
-  const token =
-    localStorage.getItem("token") || localStorage.getItem("nexusflow_token");
+  const token = getToken();
 
   return {
     headers: {

@@ -30,12 +30,18 @@ const messageService = {
   },
 
   async sendMessage(receiver, content) {
+    const receiverId = receiver?._id || receiver?.id || receiver?.receiverId;
+    const receiverName =
+      receiver?.name || receiver?.receiverName || receiver?.email || "Usuario";
+    const receiverEmail =
+      receiver?.email || receiver?.receiverEmail || "sin-correo@nexusflow.local";
+
     const response = await axios.post(
       API_URL,
       {
-        receiverId: receiver._id || receiver.id,
-        receiverName: receiver.name || "Usuario",
-        receiverEmail: receiver.email || "",
+        receiverId,
+        receiverName,
+        receiverEmail,
         content,
       },
       getAuthHeaders()

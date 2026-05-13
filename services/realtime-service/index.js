@@ -60,6 +60,10 @@ app.get("/realtime/health", (req, res) => {
 io.on("connection", (socket) => {
   console.log(`Cliente conectado: ${socket.id}`);
 
+  /*
+    BOARDS / TASKS REALTIME
+  */
+
   socket.on("join-board", (boardId) => {
     if (!boardId) return;
 
@@ -116,6 +120,51 @@ io.on("connection", (socket) => {
       boardId,
       taskId,
     });
+  });
+
+  /*
+    MESSAGES REALTIME
+  */
+
+  socket.on("join-user", (userId) => {
+    if (!userId) return;
+
+    socket.join(`user:${userId}`);
+
+    console.log(`Cliente ${socket.id} entró a sala user:${userId}`);
+
+    socket.emit("joined-user", {
+      ok: true,
+      userId,
+      room: `user:${userId}`,
+    });
+  });
+
+  socket.on("leave-user", (userId) => {
+    if (!userId) return;
+
+    socket.leave(`user:${userId}`);
+
+    console.log(`Cliente ${socket.id} salió de sala user:${userId}`);
+  });
+
+  socket.on("message:send", (message) => {
+    if (!message) return;
+
+    const senderId = message.senderId;
+    const receiverId = message.receiverId;
+
+    if (!senderId || !receiverId) {
+      console.warn("Mensaje sin senderId o receiverId:", message);
+      return;
+    }
+
+    console.log(
+      `Mensaje realtime ${senderId} -> ${receiverId}: ${message.content || ""}`
+    );
+
+    io.to(`user:${receiverId}`).emit("message:new", message);
+    io.to(`user:${senderId}`).emit("message:new", message);
   });
 
   socket.on("disconnect", () => {

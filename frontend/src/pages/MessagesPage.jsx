@@ -18,17 +18,8 @@ import SendIcon from "@mui/icons-material/Send";
 
 import messageService from "../services/messageService";
 import { getUsers } from "../services/teamService";
-
-function getCurrentUser() {
-  try {
-    const rawUser =
-      localStorage.getItem("nexusflow_user") || localStorage.getItem("user");
-
-    return rawUser ? JSON.parse(rawUser) : null;
-  } catch {
-    return null;
-  }
-}
+import { getCurrentUser } from "../services/authService";
+import { connectSocket } from "../services/socketService";
 
 export default function MessagesPage() {
   const currentUser = useMemo(() => getCurrentUser(), []);
@@ -45,6 +36,39 @@ export default function MessagesPage() {
   useEffect(() => {
     loadConversations();
   }, []);
+
+  useEffect(() => {
+    const socket = connectSocket();
+
+    socket.on("message:new", (message) => {
+      const isForMe = String(message.receiverId) === String(currentUserId);
+      const isFromMe = String(message.senderId) === String(currentUserId);
+
+      const isCurrentConversation =
+        selectedUser &&
+        (String(message.senderId) === String(selectedUser._id) ||
+          String(message.receiverId) === String(selectedUser._id));
+
+      if ((isForMe || isFromMe) && isCurrentConversation) {
+        setMessages((prev) => {
+          const exists = prev.some(
+            (item) =>
+              item._id &&
+              message._id &&
+              String(item._id) === String(message._id)
+          );
+
+          return exists ? prev : [...prev, message];
+        });
+      }
+
+      loadConversations();
+    });
+
+    return () => {
+      socket.off("message:new");
+    };
+  }, [selectedUser, currentUserId]);
 
   async function loadConversations() {
     try {
@@ -122,13 +146,27 @@ export default function MessagesPage() {
         createdAt: new Date().toISOString(),
       };
 
-      setMessages((prev) => [...prev, savedMessage]);
+      setMessages((prev) => {
+        const exists = prev.some(
+          (item) =>
+            item._id &&
+            savedMessage._id &&
+            String(item._id) === String(savedMessage._id)
+        );
+
+        return exists ? prev : [...prev, savedMessage];
+      });
+
+      const socket = connectSocket();
+      socket.emit("message:send", savedMessage);
 
       await loadConversations();
     } catch (error) {
-      console.error("Error enviando mensaje:", error);
+      console.error("Respuesta backend:", error.response?.data);
+      console.error("Usuario seleccionado:", selectedUser);
+
       setNewMessage(content);
-      setError("No se pudo enviar el mensaje.");
+      setError(error.response?.data?.message || "No se pudo enviar el mensaje.");
     }
   }
 
@@ -319,9 +357,13 @@ export default function MessagesPage() {
                   const isMine =
                     String(message.senderId) === String(currentUserId);
 
+                  const messageKey =
+                    message._id ||
+                    `${message.senderId}-${message.receiverId}-${message.createdAt}-${message.content}`;
+
                   return (
                     <Box
-                      key={message._id}
+                      key={messageKey}
                       sx={{
                         alignSelf: isMine ? "flex-end" : "flex-start",
                         maxWidth: "70%",
@@ -339,9 +381,7 @@ export default function MessagesPage() {
                           color: "#ffffff",
                         }}
                       >
-                        <Typography variant="body2">
-                          {message.content}
-                        </Typography>
+                        <Typography variant="body2">{message.content}</Typography>
 
                         <Typography
                           variant="caption"
@@ -385,9 +425,7 @@ export default function MessagesPage() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSendMessage();
-                  }
+                  if (e.key === "Enter") handleSendMessage();
                 }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
