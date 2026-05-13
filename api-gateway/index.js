@@ -24,6 +24,9 @@ const TASK_SERVICE_URL =
 const FILE_SERVICE_URL =
   process.env.FILE_SERVICE_URL || "http://localhost:3004";
 
+const MESSAGE_SERVICE_URL =
+  process.env.MESSAGE_SERVICE_URL || "http://localhost:3006";
+
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 
 app.use(
@@ -170,6 +173,10 @@ app.get("/api/auth/me", authMiddleware, (req, res) => {
   return forwardRequest(req, res, `${AUTH_SERVICE_URL}/auth/me`);
 });
 
+app.get("/api/auth/users", authMiddleware, (req, res) => {
+  return forwardRequest(req, res, `${AUTH_SERVICE_URL}/auth/users`);
+});
+
 /*
   BOARD SERVICE
 */
@@ -211,7 +218,7 @@ app.delete("/api/boards/:id", authMiddleware, (req, res) => {
 });
 
 /*
-  TASK SERVICE - pendiente
+  TASK SERVICE
 */
 
 app.get("/api/tasks/health", (req, res) => {
@@ -219,11 +226,55 @@ app.get("/api/tasks/health", (req, res) => {
 });
 
 /*
-  FILE SERVICE - pendiente
+  FILE SERVICE
 */
 
 app.get("/api/files/health", (req, res) => {
   return forwardRequest(req, res, `${FILE_SERVICE_URL}/files/health`);
+});
+
+/*
+  MESSAGE SERVICE
+*/
+
+app.get("/api/messages/health", (req, res) => {
+  return forwardRequest(req, res, `${MESSAGE_SERVICE_URL}/health`);
+});
+
+app.get("/api/messages/conversations", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${MESSAGE_SERVICE_URL}/messages/conversations`
+  );
+});
+
+app.get("/api/messages/:userId", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${MESSAGE_SERVICE_URL}/messages/${req.params.userId}`
+  );
+});
+
+app.post("/api/messages", authMiddleware, (req, res) => {
+  return forwardRequest(req, res, `${MESSAGE_SERVICE_URL}/messages`);
+});
+
+app.patch("/api/messages/:messageId/read", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${MESSAGE_SERVICE_URL}/messages/${req.params.messageId}/read`
+  );
+});
+
+app.delete("/api/messages/:messageId", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${MESSAGE_SERVICE_URL}/messages/${req.params.messageId}`
+  );
 });
 
 app.use((req, res) => {

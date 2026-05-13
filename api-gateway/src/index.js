@@ -24,6 +24,9 @@ const TASK_SERVICE_URL =
 const FILE_SERVICE_URL =
   process.env.FILE_SERVICE_URL || "http://localhost:3004";
 
+const MESSAGE_SERVICE_URL =
+  process.env.MESSAGE_SERVICE_URL || "http://localhost:3006";
+
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 
 app.use(
@@ -174,6 +177,14 @@ app.get("/api/auth/me", authMiddleware, (req, res) => {
   return forwardRequest(req, res, `${AUTH_SERVICE_URL}/auth/me`);
 });
 
+app.get("/api/auth/users", authMiddleware, (req, res) => {
+  const query = req.originalUrl.includes("?")
+    ? `?${req.originalUrl.split("?")[1]}`
+    : "";
+
+  return forwardRequest(req, res, `${AUTH_SERVICE_URL}/auth/users${query}`);
+});
+
 /*
   USERS / TEAM
 */
@@ -212,12 +223,6 @@ app.get("/api/boards", authMiddleware, (req, res) => {
 
 /*
   MEMBERS DEL TABLERO
-
-  OJO:
-  Estas rutas deben ir ANTES de:
-  /api/boards/:id
-
-  Si no, Express toma "members" como si fuera otra cosa y se hace el chistoso.
 */
 
 app.patch("/api/boards/:id/members", authMiddleware, (req, res) => {
@@ -305,7 +310,51 @@ app.delete("/api/tasks/:id", authMiddleware, (req, res) => {
 });
 
 /*
-  FILE SERVICE - pendiente
+  MESSAGE SERVICE
+*/
+
+app.get("/api/messages/health", (req, res) => {
+  return forwardRequest(req, res, `${MESSAGE_SERVICE_URL}/health`);
+});
+
+app.get("/api/messages/conversations", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${MESSAGE_SERVICE_URL}/messages/conversations`
+  );
+});
+
+app.get("/api/messages/:userId", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${MESSAGE_SERVICE_URL}/messages/${req.params.userId}`
+  );
+});
+
+app.post("/api/messages", authMiddleware, (req, res) => {
+  return forwardRequest(req, res, `${MESSAGE_SERVICE_URL}/messages`);
+});
+
+app.patch("/api/messages/:messageId/read", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${MESSAGE_SERVICE_URL}/messages/${req.params.messageId}/read`
+  );
+});
+
+app.delete("/api/messages/:messageId", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${MESSAGE_SERVICE_URL}/messages/${req.params.messageId}`
+  );
+});
+
+/*
+  FILE SERVICE
 */
 
 app.get("/api/files/health", (req, res) => {

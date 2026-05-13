@@ -6,7 +6,7 @@ import { DashboardPage } from "../pages/DashboardPage.jsx";
 import { BoardsPage } from "../pages/BoardsPage.jsx";
 import { BoardDetailPage } from "../pages/BoardDetailPage.jsx";
 import { MyTasksPage } from "../pages/MyTasksPage.jsx";
-import { MessagesPage } from "../pages/MessagesPage.jsx";
+import MessagesPage from "../pages/MessagesPage.jsx";
 import { TeamPage } from "../pages/TeamPage.jsx";
 import { SettingsPage } from "../pages/SettingsPage.jsx";
 import { NotFoundPage } from "../pages/NotFoundPage.jsx";
