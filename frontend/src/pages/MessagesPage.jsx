@@ -38,18 +38,19 @@ export default function MessagesPage() {
   }, []);
 
   useEffect(() => {
+    if (!currentUserId) return;
+
     const socket = connectSocket();
 
-    socket.on("message:new", (message) => {
-      const isForMe = String(message.receiverId) === String(currentUserId);
-      const isFromMe = String(message.senderId) === String(currentUserId);
+    socket.emit("join-user", currentUserId);
 
+    socket.on("message:new", (message) => {
       const isCurrentConversation =
         selectedUser &&
         (String(message.senderId) === String(selectedUser._id) ||
           String(message.receiverId) === String(selectedUser._id));
 
-      if ((isForMe || isFromMe) && isCurrentConversation) {
+      if (isCurrentConversation) {
         setMessages((prev) => {
           const exists = prev.some(
             (item) =>
@@ -67,6 +68,7 @@ export default function MessagesPage() {
 
     return () => {
       socket.off("message:new");
+      socket.emit("leave-user", currentUserId);
     };
   }, [selectedUser, currentUserId]);
 
@@ -134,7 +136,7 @@ export default function MessagesPage() {
 
       const response = await messageService.sendMessage(selectedUser, content);
 
-      const savedMessage = response.message || {
+      const savedMessage = response.data || response.message || {
         _id: crypto.randomUUID(),
         senderId: currentUserId,
         senderName: currentUser?.name || "Yo",

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AddIcon from "@mui/icons-material/Add";
 import AlternateEmailIcon from "@mui/icons-material/AlternateEmail";
+import DeleteIcon from "@mui/icons-material/Delete";
 import GroupsIcon from "@mui/icons-material/Groups";
 import PersonIcon from "@mui/icons-material/Person";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -34,7 +35,8 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
-import { createUser, getUsers } from "../services/userService.js";
+import { getCurrentUser } from "../services/authService.js";
+import { createUser, deleteUser, getUsers } from "../services/userService.js";
 
 function getInitials(name = "", email = "") {
   const base = name || email || "Usuario";
@@ -70,12 +72,20 @@ function formatDate(dateString) {
 }
 
 export function TeamPage() {
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.id || currentUser?._id;
+  const currentUserRole = currentUser?.role || "Miembro";
+
+  const canDeleteUsers =
+    currentUserRole === "Propietario" || currentUserRole === "Administrador";
+
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("Todos");
 
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [savingUser, setSavingUser] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -110,9 +120,7 @@ export function TeamPage() {
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
       const text = `${user.name} ${user.email} ${user.role}`.toLowerCase();
-
       const matchesSearch = text.includes(search.toLowerCase());
-
       const matchesRole = roleFilter === "Todos" || user.role === roleFilter;
 
       return matchesSearch && matchesRole;
@@ -168,6 +176,39 @@ export function TeamPage() {
       setError(error.message || "No se pudo crear el usuario.");
     } finally {
       setSavingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (!userId) return;
+
+    if (String(currentUserId) === String(userId)) {
+      setError("No puedes eliminar tu propio usuario.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "¿Seguro que deseas eliminar este usuario?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingUserId(userId);
+      setError("");
+      setSuccessMessage("");
+
+      await deleteUser(userId);
+
+      setUsers((prevUsers) =>
+        prevUsers.filter((user) => String(user._id || user.id) !== String(userId))
+      );
+
+      setSuccessMessage("Usuario eliminado correctamente.");
+    } catch (error) {
+      setError(error.message || "No se pudo eliminar el usuario.");
+    } finally {
+      setDeletingUserId("");
     }
   };
 
@@ -336,104 +377,144 @@ export function TeamPage() {
               gap: 3,
             }}
           >
-            {filteredUsers.map((user) => (
-              <Card
-                key={user._id || user.id}
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  transition: "0.2s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                    boxShadow: "0 18px 45px rgba(15, 23, 42, 0.14)",
-                  },
-                }}
-              >
-                <CardContent sx={{ p: 3 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 2,
-                      mb: 2,
-                    }}
-                  >
-                    <Avatar
-                      sx={(theme) => ({
-                        width: 56,
-                        height: 56,
-                        bgcolor: alpha(theme.palette.primary.main, 0.14),
-                        color: "primary.main",
-                        fontWeight: 900,
-                      })}
+            {filteredUsers.map((user) => {
+              const userId = user._id || user.id;
+              const isCurrentUser = String(currentUserId) === String(userId);
+
+              return (
+                <Card
+                  key={userId}
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    transition: "0.2s ease",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      boxShadow: "0 18px 45px rgba(15, 23, 42, 0.14)",
+                    },
+                  }}
+                >
+                  <CardContent sx={{ p: 3 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 2,
+                        mb: 2,
+                      }}
                     >
-                      {getInitials(user.name, user.email)}
-                    </Avatar>
+                      <Avatar
+                        sx={(theme) => ({
+                          width: 56,
+                          height: 56,
+                          bgcolor: alpha(theme.palette.primary.main, 0.14),
+                          color: "primary.main",
+                          fontWeight: 900,
+                        })}
+                      >
+                        {getInitials(user.name, user.email)}
+                      </Avatar>
 
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography variant="h6" noWrap>
-                        {user.name}
-                      </Typography>
+                      <Box
+                        sx={{
+                          minWidth: 0,
+                          flex: 1,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          gap: 1,
+                        }}
+                      >
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="h6" noWrap>
+                            {user.name}
+                          </Typography>
 
-                      <Stack direction="row" spacing={0.8} alignItems="center">
-                        <AlternateEmailIcon fontSize="small" color="action" />
+                          <Stack
+                            direction="row"
+                            spacing={0.8}
+                            alignItems="center"
+                          >
+                            <AlternateEmailIcon fontSize="small" color="action" />
 
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          noWrap
-                        >
-                          {user.email}
-                        </Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              noWrap
+                            >
+                              {user.email}
+                            </Typography>
+                          </Stack>
+                        </Box>
+
+                        {canDeleteUsers && !isCurrentUser && (
+                          <Tooltip title="Eliminar usuario">
+                            <span>
+                              <IconButton
+                                color="error"
+                                disabled={deletingUserId === userId}
+                                onClick={() => handleDeleteUser(userId)}
+                              >
+                                {deletingUserId === userId ? (
+                                  <CircularProgress size={20} />
+                                ) : (
+                                  <DeleteIcon />
+                                )}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </Box>
+
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        mb: 2,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <Chip
+                        label={user.role || "Miembro"}
+                        color={getRoleColor(user.role)}
+                        size="small"
+                      />
+
+                      <Chip
+                        label={user.status || "Activo"}
+                        variant="outlined"
+                        size="small"
+                      />
+                    </Stack>
+
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderRadius: 4,
+                        bgcolor: "background.default",
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Stack direction="row" spacing={1.2} alignItems="center">
+                        <PersonIcon color="action" />
+
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">
+                            Registrado
+                          </Typography>
+
+                          <Typography fontWeight={800}>
+                            {formatDate(user.createdAt)}
+                          </Typography>
+                        </Box>
                       </Stack>
                     </Box>
-                  </Box>
-
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    flexWrap="wrap"
-                    sx={{ mb: 2 }}
-                  >
-                    <Chip
-                      label={user.role || "Miembro"}
-                      color={getRoleColor(user.role)}
-                      size="small"
-                    />
-
-                    <Chip
-                      label={user.status || "Activo"}
-                      variant="outlined"
-                      size="small"
-                    />
-                  </Stack>
-
-                  <Box
-                    sx={{
-                      p: 2,
-                      borderRadius: 4,
-                      bgcolor: "background.default",
-                      border: "1px solid",
-                      borderColor: "divider",
-                    }}
-                  >
-                    <Stack direction="row" spacing={1.2} alignItems="center">
-                      <PersonIcon color="action" />
-
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Registrado
-                        </Typography>
-
-                        <Typography fontWeight={800}>
-                          {formatDate(user.createdAt)}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </Box>
 
           {filteredUsers.length === 0 && (

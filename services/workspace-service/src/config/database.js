@@ -1,13 +1,18 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const connectDB = async () => {
+export default async function connectDB() {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("MongoDB conectado en workspace-service");
+    const mongoUri = process.env.MONGO_URI;
+
+    if (!mongoUri) {
+      throw new Error("MONGO_URI no está definido en el .env");
+    }
+
+    await mongoose.connect(mongoUri);
+
+    console.log("MongoDB conectado correctamente en Workspace Service");
   } catch (error) {
     console.error("Error conectando MongoDB:", error.message);
     process.exit(1);
   }
-};
-
-module.exports = connectDB;
+}

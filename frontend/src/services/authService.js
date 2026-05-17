@@ -6,12 +6,12 @@ async function request(endpoint, options = {}) {
 
   try {
     const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {}),
       },
       signal: controller.signal,
-      ...options,
     });
 
     const data = await response.json();
@@ -50,6 +50,21 @@ export async function registerUser({ name, email, password, role }) {
       email,
       password,
       role,
+    }),
+  });
+}
+
+export async function changePassword({ currentPassword, newPassword }) {
+  const token = getToken();
+
+  return request("/api/auth/change-password", {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      currentPassword,
+      newPassword,
     }),
   });
 }

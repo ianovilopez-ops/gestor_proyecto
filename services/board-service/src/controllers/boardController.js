@@ -12,7 +12,7 @@ function getUserFromRequest(req) {
 export async function createBoard(req, res) {
   try {
     const user = getUserFromRequest(req);
-    const { name, description, area, status } = req.body;
+    const { name, description, area, status, workspaceId } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({
@@ -26,6 +26,7 @@ export async function createBoard(req, res) {
       description: description?.trim() || "",
       area: area?.trim() || "General",
       status: status || "Pendiente",
+      workspaceId: workspaceId || "",
       ownerId: user.id,
       createdBy: user.email,
       members: [
@@ -37,21 +38,9 @@ export async function createBoard(req, res) {
         },
       ],
       columns: [
-        {
-          id: "pending",
-          title: "Pendiente",
-          order: 1,
-        },
-        {
-          id: "in_progress",
-          title: "En proceso",
-          order: 2,
-        },
-        {
-          id: "done",
-          title: "Hecho",
-          order: 3,
-        },
+        { id: "pending", title: "Pendiente", order: 1 },
+        { id: "in_progress", title: "En proceso", order: 2 },
+        { id: "done", title: "Hecho", order: 3 },
       ],
     });
 
@@ -62,7 +51,6 @@ export async function createBoard(req, res) {
     });
   } catch (error) {
     console.error("Error en createBoard:", error);
-
     return res.status(500).json({
       ok: false,
       message: "Error interno al crear tablero.",
@@ -73,10 +61,17 @@ export async function createBoard(req, res) {
 export async function getBoards(req, res) {
   try {
     const user = getUserFromRequest(req);
+    const { workspaceId } = req.query;
 
-    const boards = await Board.find({
+    const filter = {
       $or: [{ ownerId: user.id }, { "members.userId": user.id }],
-    }).sort({ createdAt: -1 });
+    };
+
+    if (workspaceId) {
+      filter.workspaceId = workspaceId;
+    }
+
+    const boards = await Board.find(filter).sort({ createdAt: -1 });
 
     return res.json({
       ok: true,
@@ -84,7 +79,6 @@ export async function getBoards(req, res) {
     });
   } catch (error) {
     console.error("Error en getBoards:", error);
-
     return res.status(500).json({
       ok: false,
       message: "Error interno al obtener tableros.",
@@ -94,9 +88,7 @@ export async function getBoards(req, res) {
 
 export async function getBoardById(req, res) {
   try {
-    const { id } = req.params;
-
-    const board = await Board.findById(id);
+    const board = await Board.findById(req.params.id);
 
     if (!board) {
       return res.status(404).json({
@@ -105,13 +97,9 @@ export async function getBoardById(req, res) {
       });
     }
 
-    return res.json({
-      ok: true,
-      board,
-    });
+    return res.json({ ok: true, board });
   } catch (error) {
     console.error("Error en getBoardById:", error);
-
     return res.status(500).json({
       ok: false,
       message: "Error interno al obtener tablero.",
@@ -121,21 +109,18 @@ export async function getBoardById(req, res) {
 
 export async function updateBoard(req, res) {
   try {
-    const { id } = req.params;
-    const { name, description, area, status } = req.body;
+    const { name, description, area, status, workspaceId } = req.body;
 
     const board = await Board.findByIdAndUpdate(
-      id,
+      req.params.id,
       {
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description }),
         ...(area !== undefined && { area }),
         ...(status !== undefined && { status }),
+        ...(workspaceId !== undefined && { workspaceId }),
       },
-      {
-        new: true,
-        runValidators: true,
-      }
+      { new: true, runValidators: true }
     );
 
     if (!board) {
@@ -152,7 +137,6 @@ export async function updateBoard(req, res) {
     });
   } catch (error) {
     console.error("Error en updateBoard:", error);
-
     return res.status(500).json({
       ok: false,
       message: "Error interno al actualizar tablero.",
@@ -162,9 +146,7 @@ export async function updateBoard(req, res) {
 
 export async function deleteBoard(req, res) {
   try {
-    const { id } = req.params;
-
-    const board = await Board.findByIdAndDelete(id);
+    const board = await Board.findByIdAndDelete(req.params.id);
 
     if (!board) {
       return res.status(404).json({
@@ -179,7 +161,6 @@ export async function deleteBoard(req, res) {
     });
   } catch (error) {
     console.error("Error en deleteBoard:", error);
-
     return res.status(500).json({
       ok: false,
       message: "Error interno al eliminar tablero.",
@@ -189,7 +170,6 @@ export async function deleteBoard(req, res) {
 
 export async function addBoardMember(req, res) {
   try {
-    const { id } = req.params;
     const { userId, name, email, role } = req.body;
 
     if (!userId || !email) {
@@ -199,7 +179,7 @@ export async function addBoardMember(req, res) {
       });
     }
 
-    const board = await Board.findById(id);
+    const board = await Board.findById(req.params.id);
 
     if (!board) {
       return res.status(404).json({
@@ -235,7 +215,6 @@ export async function addBoardMember(req, res) {
     });
   } catch (error) {
     console.error("Error en addBoardMember:", error);
-
     return res.status(500).json({
       ok: false,
       message: "Error interno al agregar miembro.",
@@ -245,9 +224,9 @@ export async function addBoardMember(req, res) {
 
 export async function removeBoardMember(req, res) {
   try {
-    const { id, userId } = req.params;
+    const { userId } = req.params;
 
-    const board = await Board.findById(id);
+    const board = await Board.findById(req.params.id);
 
     if (!board) {
       return res.status(404).json({
@@ -256,9 +235,7 @@ export async function removeBoardMember(req, res) {
       });
     }
 
-    board.members = board.members.filter(
-      (member) => member.userId !== userId
-    );
+    board.members = board.members.filter((member) => member.userId !== userId);
 
     await board.save();
 
@@ -269,10 +246,10 @@ export async function removeBoardMember(req, res) {
     });
   } catch (error) {
     console.error("Error en removeBoardMember:", error);
-
     return res.status(500).json({
       ok: false,
       message: "Error interno al eliminar miembro.",
     });
   }
 }
+

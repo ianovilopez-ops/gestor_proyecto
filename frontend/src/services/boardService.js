@@ -31,7 +31,19 @@ export async function getBoards() {
   });
 }
 
-export async function createBoard({ name, description, area, status }) {
+export async function getBoardsByWorkspace(workspaceId) {
+  return request(`/api/boards?workspaceId=${workspaceId}`, {
+    method: "GET",
+  });
+}
+
+export async function createBoard({
+  name,
+  description,
+  area,
+  status,
+  workspaceId,
+}) {
   return request("/api/boards", {
     method: "POST",
     body: JSON.stringify({
@@ -39,6 +51,7 @@ export async function createBoard({ name, description, area, status }) {
       description,
       area,
       status,
+      workspaceId,
     }),
   });
 }

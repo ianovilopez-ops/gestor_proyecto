@@ -6,9 +6,7 @@ const SOCKET_URL = "http://localhost:3005";
 let socket = null;
 
 export function connectSocket() {
-  if (socket) {
-    return socket;
-  }
+  if (socket) return socket;
 
   socket = io(SOCKET_URL, {
     auth: {

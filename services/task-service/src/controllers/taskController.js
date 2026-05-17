@@ -1,5 +1,8 @@
 import { Task } from "../models/Task.js";
 
+const NOTIFICATION_SERVICE_URL =
+  process.env.NOTIFICATION_SERVICE_URL || "http://localhost:3007";
+
 function getUserFromRequest(req) {
   return {
     id: req.headers["x-user-id"] || "dev-user",
@@ -18,6 +21,21 @@ function getInitials(nameOrEmail = "U") {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+async function createNotification(payload) {
+  try {
+    await fetch(`${NOTIFICATION_SERVICE_URL}/notifications`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": payload.userId || "dev-user",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.error("Error enviando notificación:", error.message);
+  }
 }
 
 export async function createTask(req, res) {
@@ -68,6 +86,22 @@ export async function createTask(req, res) {
       ownerId: user.id,
       createdBy: user.email,
       position: Number(position || 0),
+    });
+
+    await createNotification({
+      userId: task.assignedTo?.userId || user.id,
+      title: "Nueva tarea asignada",
+      message: `Se creó la tarea "${task.title}".`,
+      type: "task",
+      relatedId: task._id.toString(),
+      relatedType: "task",
+      priority: task.priority || "Media",
+      dedupeKey: `${task._id}-task-created`,
+      metadata: {
+        boardId,
+        taskId: task._id.toString(),
+        createdBy: user.name,
+      },
     });
 
     return res.status(201).json({

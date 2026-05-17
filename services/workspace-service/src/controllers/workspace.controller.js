@@ -1,48 +1,134 @@
-const mongoose = require("mongoose");
-const Workspace = require("../models/Workspace");
+import Workspace from "../models/Workspace.js";
 
-const createWorkspace = async (req, res) => {
+function getUser(req) {
+  return {
+    id: req.headers["x-user-id"],
+    name: req.headers["x-user-name"] || "Usuario",
+    email: req.headers["x-user-email"] || "",
+  };
+}
+
+function findMember(workspace, user) {
+  return workspace.members.find(
+    (member) =>
+      String(member.userId) === String(user.id) ||
+      String(member.email).toLowerCase() ===
+        String(user.email).toLowerCase()
+  );
+}
+
+function isOwner(workspace, user) {
+  return (
+    String(workspace.ownerId) === String(user.id) ||
+    String(workspace.ownerEmail).toLowerCase() ===
+      String(user.email).toLowerCase()
+  );
+}
+
+function isAdmin(workspace, user) {
+  if (isOwner(workspace, user)) return true;
+
+  const member = findMember(workspace, user);
+
+  if (!member) return false;
+
+  return (
+    member.role === "admin" ||
+    member.role === "Administrador"
+  );
+}
+
+function canAccess(workspace, user) {
+  if (isOwner(workspace, user)) return true;
+
+  return workspace.members.some(
+    (member) =>
+      String(member.userId) === String(user.id) ||
+      String(member.email).toLowerCase() ===
+        String(user.email).toLowerCase()
+  );
+}
+
+export async function getWorkspaces(req, res) {
   try {
-    const {
-      name,
-      description = "",
-      ownerId = "dev-user",
-      ownerName = "",
-      ownerEmail = "",
-    } = req.body;
+    const user = getUser(req);
 
-    if (!name) {
+    const workspaces = await Workspace.find({
+      $or: [
+        { ownerId: user.id },
+        { ownerEmail: user.email },
+        { "members.userId": user.id },
+        { "members.email": user.email },
+      ],
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      ok: true,
+      workspaces,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: "Error obteniendo workspaces.",
+      error: error.message,
+    });
+  }
+}
+
+export async function getWorkspaceById(req, res) {
+  try {
+    const user = getUser(req);
+
+    const workspace = await Workspace.findById(req.params.id);
+
+    if (!workspace || !canAccess(workspace, user)) {
+      return res.status(404).json({
+        ok: false,
+        message: "Workspace no encontrado o sin acceso.",
+      });
+    }
+
+    res.json({
+      ok: true,
+      workspace,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      message: "Error obteniendo workspace.",
+      error: error.message,
+    });
+  }
+}
+
+export async function createWorkspace(req, res) {
+  try {
+    const user = getUser(req);
+
+    const { name, description } = req.body;
+
+    if (!name?.trim()) {
       return res.status(400).json({
         ok: false,
         message: "El nombre del workspace es obligatorio.",
       });
     }
 
-    const workspaceData = {
-      name,
-      description,
-      ownerId,
+    const workspace = await Workspace.create({
+      name: name.trim(),
+      description: description?.trim() || "",
+      ownerId: user.id,
+      ownerName: user.name,
+      ownerEmail: user.email,
       members: [
         {
-          userId: ownerId,
-          name: ownerName,
-          email: ownerEmail,
+          userId: user.id,
+          name: user.name,
+          email: user.email,
           role: "owner",
-          status: "active",
         },
       ],
-    };
-
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(201).json({
-        ok: true,
-        mode: "dev-without-mongo",
-        message: "Workspace simulado. MongoDB no está conectado.",
-        workspace: workspaceData,
-      });
-    }
-
-    const workspace = await Workspace.create(workspaceData);
+    });
 
     res.status(201).json({
       ok: true,
@@ -52,108 +138,36 @@ const createWorkspace = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       ok: false,
-      message: "Error al crear workspace.",
+      message: "Error creando workspace.",
       error: error.message,
     });
   }
-};
+}
 
-const getWorkspaces = async (req, res) => {
+export async function updateWorkspace(req, res) {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.json({
-        ok: true,
-        mode: "dev-without-mongo",
-        message: "MongoDB no está conectado. No se pueden listar workspaces.",
-        workspaces: [],
-      });
-    }
-
-    const workspaces = await Workspace.find({ isActive: true }).sort({
-      createdAt: -1,
-    });
-
-    res.json({
-      ok: true,
-      workspaces,
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      message: "Error al obtener workspaces.",
-      error: error.message,
-    });
-  }
-};
-
-const getWorkspaceById = async (req, res) => {
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.json({
-        ok: true,
-        mode: "dev-without-mongo",
-        message: "MongoDB no está conectado. No se puede obtener workspace por ID.",
-        workspace: null,
-      });
-    }
+    const user = getUser(req);
 
     const workspace = await Workspace.findById(req.params.id);
 
-    if (!workspace || !workspace.isActive) {
-      return res.status(404).json({
+    if (!workspace || !isAdmin(workspace, user)) {
+      return res.status(403).json({
         ok: false,
-        message: "Workspace no encontrado.",
+        message: "No tienes permisos para editar este workspace.",
       });
     }
 
-    res.json({
-      ok: true,
-      workspace,
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      message: "Error al obtener workspace.",
-      error: error.message,
-    });
-  }
-};
-
-const updateWorkspace = async (req, res) => {
-  try {
     const { name, description } = req.body;
 
-    if (mongoose.connection.readyState !== 1) {
-      return res.json({
-        ok: true,
-        mode: "dev-without-mongo",
-        message: "Workspace simulado actualizado. MongoDB no está conectado.",
-        workspace: {
-          id: req.params.id,
-          name,
-          description,
-        },
-      });
+    if (name !== undefined) {
+      workspace.name = name;
     }
 
-    const workspace = await Workspace.findByIdAndUpdate(
-      req.params.id,
-      {
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
-      },
-      {
-        new: true,
-        runValidators: true,
-      }
-    );
-
-    if (!workspace || !workspace.isActive) {
-      return res.status(404).json({
-        ok: false,
-        message: "Workspace no encontrado.",
-      });
+    if (description !== undefined) {
+      workspace.description = description;
     }
+
+    await workspace.save();
 
     res.json({
       ok: true,
@@ -163,35 +177,26 @@ const updateWorkspace = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       ok: false,
-      message: "Error al actualizar workspace.",
+      message: "Error actualizando workspace.",
       error: error.message,
     });
   }
-};
+}
 
-const deleteWorkspace = async (req, res) => {
+export async function deleteWorkspace(req, res) {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res.json({
-        ok: true,
-        mode: "dev-without-mongo",
-        message: "Workspace simulado eliminado. MongoDB no está conectado.",
-        workspaceId: req.params.id,
-      });
-    }
+    const user = getUser(req);
 
-    const workspace = await Workspace.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
+    const workspace = await Workspace.findById(req.params.id);
 
-    if (!workspace) {
-      return res.status(404).json({
+    if (!workspace || !isOwner(workspace, user)) {
+      return res.status(403).json({
         ok: false,
-        message: "Workspace no encontrado.",
+        message: "Solo el owner puede eliminar el workspace.",
       });
     }
+
+    await workspace.deleteOne();
 
     res.json({
       ok: true,
@@ -200,69 +205,58 @@ const deleteWorkspace = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       ok: false,
-      message: "Error al eliminar workspace.",
+      message: "Error eliminando workspace.",
       error: error.message,
     });
   }
-};
+}
 
-const addMemberToWorkspace = async (req, res) => {
+export async function addWorkspaceMember(req, res) {
   try {
-    const { userId, name = "", email = "", role = "member" } = req.body;
-
-    if (!userId) {
-      return res.status(400).json({
-        ok: false,
-        message: "El userId del miembro es obligatorio.",
-      });
-    }
-
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(201).json({
-        ok: true,
-        mode: "dev-without-mongo",
-        message: "Miembro simulado agregado. MongoDB no está conectado.",
-        member: {
-          userId,
-          name,
-          email,
-          role,
-          status: "active",
-        },
-      });
-    }
+    const user = getUser(req);
 
     const workspace = await Workspace.findById(req.params.id);
 
-    if (!workspace || !workspace.isActive) {
-      return res.status(404).json({
+    if (!workspace || !isAdmin(workspace, user)) {
+      return res.status(403).json({
         ok: false,
-        message: "Workspace no encontrado.",
+        message: "No tienes permisos para agregar miembros.",
       });
     }
 
-    const alreadyMember = workspace.members.some(
-      (member) => member.userId === userId && member.status !== "removed"
-    );
+    const { userId, name, email, role } = req.body;
 
-    if (alreadyMember) {
+    if (!name || !email) {
       return res.status(400).json({
         ok: false,
-        message: "El usuario ya pertenece a este workspace.",
+        message: "Nombre y correo obligatorios.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const alreadyExists = workspace.members.some(
+      (member) =>
+        String(member.email).toLowerCase() === normalizedEmail
+    );
+
+    if (alreadyExists) {
+      return res.status(400).json({
+        ok: false,
+        message: "El usuario ya pertenece al workspace.",
       });
     }
 
     workspace.members.push({
-      userId,
+      userId: userId || normalizedEmail,
       name,
-      email,
-      role,
-      status: "active",
+      email: normalizedEmail,
+      role: role || "member",
     });
 
     await workspace.save();
 
-    res.status(201).json({
+    res.json({
       ok: true,
       message: "Miembro agregado correctamente.",
       workspace,
@@ -270,142 +264,43 @@ const addMemberToWorkspace = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       ok: false,
-      message: "Error al agregar miembro.",
+      message: "Error agregando miembro.",
       error: error.message,
     });
   }
-};
+}
 
-const updateMemberRole = async (req, res) => {
+export async function removeWorkspaceMember(req, res) {
   try {
-    const { memberUserId } = req.params;
-    const { role } = req.body;
-
-    const validRoles = ["owner", "admin", "member", "viewer"];
-
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({
-        ok: false,
-        message: "Rol no válido.",
-      });
-    }
-
-    if (mongoose.connection.readyState !== 1) {
-      return res.json({
-        ok: true,
-        mode: "dev-without-mongo",
-        message: "Rol de miembro simulado actualizado. MongoDB no está conectado.",
-        member: {
-          userId: memberUserId,
-          role,
-        },
-      });
-    }
+    const user = getUser(req);
 
     const workspace = await Workspace.findById(req.params.id);
 
-    if (!workspace || !workspace.isActive) {
-      return res.status(404).json({
+    if (!workspace || !isOwner(workspace, user)) {
+      return res.status(403).json({
         ok: false,
-        message: "Workspace no encontrado.",
+        message: "Solo el owner puede eliminar miembros.",
       });
     }
 
-    const member = workspace.members.find(
-      (member) => member.userId === memberUserId && member.status !== "removed"
+    workspace.members = workspace.members.filter(
+      (member) =>
+        String(member.userId) !== String(req.params.userId) &&
+        String(member.email) !== String(req.params.userId)
     );
-
-    if (!member) {
-      return res.status(404).json({
-        ok: false,
-        message: "Miembro no encontrado.",
-      });
-    }
-
-    member.role = role;
 
     await workspace.save();
 
     res.json({
       ok: true,
-      message: "Rol de miembro actualizado correctamente.",
+      message: "Miembro eliminado correctamente.",
       workspace,
     });
   } catch (error) {
     res.status(500).json({
       ok: false,
-      message: "Error al actualizar rol del miembro.",
+      message: "Error eliminando miembro.",
       error: error.message,
     });
   }
-};
-
-const removeMemberFromWorkspace = async (req, res) => {
-  try {
-    const { memberUserId } = req.params;
-
-    if (mongoose.connection.readyState !== 1) {
-      return res.json({
-        ok: true,
-        mode: "dev-without-mongo",
-        message: "Miembro simulado removido. MongoDB no está conectado.",
-        memberUserId,
-      });
-    }
-
-    const workspace = await Workspace.findById(req.params.id);
-
-    if (!workspace || !workspace.isActive) {
-      return res.status(404).json({
-        ok: false,
-        message: "Workspace no encontrado.",
-      });
-    }
-
-    const member = workspace.members.find(
-      (member) => member.userId === memberUserId && member.status !== "removed"
-    );
-
-    if (!member) {
-      return res.status(404).json({
-        ok: false,
-        message: "Miembro no encontrado.",
-      });
-    }
-
-    if (member.role === "owner") {
-      return res.status(400).json({
-        ok: false,
-        message: "No puedes remover al owner del workspace.",
-      });
-    }
-
-    member.status = "removed";
-
-    await workspace.save();
-
-    res.json({
-      ok: true,
-      message: "Miembro removido correctamente.",
-      workspace,
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      message: "Error al remover miembro.",
-      error: error.message,
-    });
-  }
-};
-
-
-module.exports = {
-  createWorkspace,
-  getWorkspaces,
-  getWorkspaceById,
-  updateWorkspace,
-  deleteWorkspace,
-  addMemberToWorkspace,
-  updateMemberRole,
-  removeMemberFromWorkspace,
-};
+}

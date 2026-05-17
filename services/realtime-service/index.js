@@ -123,7 +123,7 @@ io.on("connection", (socket) => {
   });
 
   /*
-    MESSAGES REALTIME
+    USERS / MESSAGES REALTIME
   */
 
   socket.on("join-user", (userId) => {
@@ -165,6 +165,34 @@ io.on("connection", (socket) => {
 
     io.to(`user:${receiverId}`).emit("message:new", message);
     io.to(`user:${senderId}`).emit("message:new", message);
+  });
+
+  /*
+    NOTIFICATIONS REALTIME
+  */
+
+  socket.on("notification-created", (payload) => {
+    if (!payload?.userId || !payload?.notification) return;
+
+    io.to(`user:${payload.userId}`).emit("notification-created", payload);
+  });
+
+  socket.on("notification-read", (payload) => {
+    if (!payload?.userId) return;
+
+    io.to(`user:${payload.userId}`).emit("notification-read", payload);
+  });
+
+  socket.on("notifications-read-all", (payload) => {
+    if (!payload?.userId) return;
+
+    io.to(`user:${payload.userId}`).emit("notifications-read-all", payload);
+  });
+
+  socket.on("notification-deleted", (payload) => {
+    if (!payload?.userId) return;
+
+    io.to(`user:${payload.userId}`).emit("notification-deleted", payload);
   });
 
   socket.on("disconnect", () => {

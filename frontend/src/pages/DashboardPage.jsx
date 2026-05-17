@@ -141,7 +141,6 @@ export function DashboardPage() {
       setError("");
 
       const response = await getBoards();
-
       setBoards(response.boards || []);
     } catch (error) {
       setError(error.message || "No se pudo cargar el panel principal.");
@@ -212,7 +211,14 @@ export function DashboardPage() {
             Bienvenido, {userName}. Aquí tienes el resumen general de NexusFlow.
           </Typography>
 
-          <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 2 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              mt: 2,
+              flexWrap: "wrap",
+            }}
+          >
             <Chip label={userRole} color="primary" />
             {userEmail && <Chip label={userEmail} variant="outlined" />}
             <Chip label="Sesión activa" color="success" variant="outlined" />
@@ -420,8 +426,10 @@ export function DashboardPage() {
                                 direction="row"
                                 spacing={1}
                                 alignItems="center"
-                                flexWrap="wrap"
-                                sx={{ mb: 1 }}
+                                sx={{
+                                  mb: 1,
+                                  flexWrap: "wrap",
+                                }}
                               >
                                 <Typography variant="h6">
                                   {board.name}
@@ -446,7 +454,9 @@ export function DashboardPage() {
                                 direction="row"
                                 spacing={1}
                                 alignItems="center"
-                                flexWrap="wrap"
+                                sx={{
+                                  flexWrap: "wrap",
+                                }}
                               >
                                 <Chip
                                   label={board.area || "General"}

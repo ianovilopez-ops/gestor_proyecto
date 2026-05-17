@@ -9,12 +9,14 @@ import LinkIcon from "@mui/icons-material/Link";
 import SaveIcon from "@mui/icons-material/Save";
 
 import {
+  Alert,
   Avatar,
   Box,
   Button,
   Card,
   CardContent,
   Chip,
+  CircularProgress,
   Divider,
   FormControl,
   FormControlLabel,
@@ -32,6 +34,8 @@ import {
   setPrimaryColor,
   setThemeMode,
 } from "../app/store.js";
+
+import { changePassword, getCurrentUser } from "../services/authService.js";
 
 const settingSections = [
   {
@@ -55,7 +59,7 @@ const settingSections = [
   {
     id: "security",
     title: "Seguridad",
-    description: "Contraseña, sesiones y acceso.",
+    description: "Contraseña y acceso.",
     icon: <SecurityIcon />,
   },
   {
@@ -93,12 +97,14 @@ export function SettingsPage() {
   const compactMode = useSelector((state) => state.ui.compactMode);
   const primaryColor = useSelector((state) => state.ui.primaryColor);
 
+  const currentUser = getCurrentUser();
+
   const [activeSection, setActiveSection] = useState("profile");
 
   const [profileForm, setProfileForm] = useState({
-    name: "Ian Oviedo",
-    email: "ian@nexusflow.com",
-    role: "Propietario",
+    name: currentUser?.name || "Usuario",
+    email: currentUser?.email || "usuario@nexusflow.local",
+    role: currentUser?.role || "Miembro",
     area: "Full Stack",
   });
 
@@ -106,9 +112,17 @@ export function SettingsPage() {
     emailNotifications: true,
     taskNotifications: true,
     commentNotifications: true,
-    twoFactor: false,
-    sessionAlerts: true,
   });
+
+  const [securityForm, setSecurityForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [securityLoading, setSecurityLoading] = useState(false);
+  const [securityError, setSecurityError] = useState("");
+  const [securitySuccess, setSecuritySuccess] = useState("");
 
   const handlePreferenceChange = (key) => {
     setPreferences((prev) => ({
@@ -127,6 +141,50 @@ export function SettingsPage() {
 
   const handlePrimaryColorChange = (color) => {
     dispatch(setPrimaryColor(color));
+  };
+
+  const handleChangePassword = async () => {
+    if (
+      !securityForm.currentPassword ||
+      !securityForm.newPassword ||
+      !securityForm.confirmPassword
+    ) {
+      setSecurityError("Completa todos los campos.");
+      return;
+    }
+
+    if (securityForm.newPassword.length < 6) {
+      setSecurityError("La nueva contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    if (securityForm.newPassword !== securityForm.confirmPassword) {
+      setSecurityError("Las contraseñas nuevas no coinciden.");
+      return;
+    }
+
+    try {
+      setSecurityLoading(true);
+      setSecurityError("");
+      setSecuritySuccess("");
+
+      await changePassword({
+        currentPassword: securityForm.currentPassword,
+        newPassword: securityForm.newPassword,
+      });
+
+      setSecuritySuccess("Contraseña actualizada correctamente.");
+
+      setSecurityForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (error) {
+      setSecurityError(error.message || "No se pudo cambiar la contraseña.");
+    } finally {
+      setSecurityLoading(false);
+    }
   };
 
   const renderContent = () => {
@@ -159,7 +217,7 @@ export function SettingsPage() {
                   fontWeight: 900,
                 }}
               >
-                I
+                {(profileForm.name || "U").charAt(0).toUpperCase()}
               </Avatar>
 
               <Box>
@@ -171,7 +229,7 @@ export function SettingsPage() {
 
                 <Chip
                   label={profileForm.role}
-                  color="error"
+                  color="primary"
                   size="small"
                   sx={{ mt: 1 }}
                 />
@@ -223,6 +281,7 @@ export function SettingsPage() {
 
               <FormControl fullWidth>
                 <InputLabel>Rol</InputLabel>
+
                 <Select
                   label="Rol"
                   value={profileForm.role}
@@ -351,7 +410,13 @@ export function SettingsPage() {
                   Selecciona el color principal de la plataforma.
                 </Typography>
 
-                <Stack direction="row" spacing={1} flexWrap="wrap">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    flexWrap: "wrap",
+                  }}
+                >
                   {primaryColors.map((color) => {
                     const selected = primaryColor === color;
 
@@ -399,44 +464,82 @@ export function SettingsPage() {
             </Typography>
 
             <Typography color="text.secondary" sx={{ mb: 3 }}>
-              Control de acceso y protección de cuenta.
+              Cambia la contraseña de acceso a tu cuenta.
             </Typography>
 
             <Stack spacing={2}>
-              <TextField label="Contraseña actual" type="password" fullWidth />
+              {securityError && (
+                <Alert severity="error" onClose={() => setSecurityError("")}>
+                  {securityError}
+                </Alert>
+              )}
 
-              <TextField label="Nueva contraseña" type="password" fullWidth />
+              {securitySuccess && (
+                <Alert
+                  severity="success"
+                  onClose={() => setSecuritySuccess("")}
+                >
+                  {securitySuccess}
+                </Alert>
+              )}
+
+              <TextField
+                label="Contraseña actual"
+                type="password"
+                fullWidth
+                value={securityForm.currentPassword}
+                onChange={(event) =>
+                  setSecurityForm((prev) => ({
+                    ...prev,
+                    currentPassword: event.target.value,
+                  }))
+                }
+                disabled={securityLoading}
+              />
+
+              <TextField
+                label="Nueva contraseña"
+                type="password"
+                fullWidth
+                value={securityForm.newPassword}
+                onChange={(event) =>
+                  setSecurityForm((prev) => ({
+                    ...prev,
+                    newPassword: event.target.value,
+                  }))
+                }
+                disabled={securityLoading}
+              />
 
               <TextField
                 label="Confirmar nueva contraseña"
                 type="password"
                 fullWidth
-              />
-
-              <Divider />
-
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={preferences.twoFactor}
-                    onChange={() => handlePreferenceChange("twoFactor")}
-                  />
+                value={securityForm.confirmPassword}
+                onChange={(event) =>
+                  setSecurityForm((prev) => ({
+                    ...prev,
+                    confirmPassword: event.target.value,
+                  }))
                 }
-                label="Activar verificación en dos pasos"
+                disabled={securityLoading}
               />
 
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={preferences.sessionAlerts}
-                    onChange={() => handlePreferenceChange("sessionAlerts")}
-                  />
+              <Button
+                variant="contained"
+                startIcon={
+                  securityLoading ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <SaveIcon />
+                  )
                 }
-                label="Avisar cuando se inicie sesión desde otro dispositivo"
-              />
-
-              <Button variant="contained" startIcon={<SaveIcon />}>
-                Actualizar seguridad
+                disabled={securityLoading}
+                onClick={handleChangePassword}
+              >
+                {securityLoading
+                  ? "Actualizando..."
+                  : "Actualizar contraseña"}
               </Button>
             </Stack>
           </CardContent>

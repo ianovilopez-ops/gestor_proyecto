@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const workspaceMemberSchema = new mongoose.Schema(
+const memberSchema = new mongoose.Schema(
   {
     userId: {
       type: String,
@@ -8,28 +8,16 @@ const workspaceMemberSchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      default: "",
-      trim: true,
+      default: "Usuario",
     },
     email: {
       type: String,
       default: "",
-      trim: true,
-      lowercase: true,
     },
     role: {
       type: String,
-      enum: ["owner", "admin", "member", "viewer"],
-      default: "member",
-    },
-    status: {
-      type: String,
-      enum: ["active", "pending", "removed"],
-      default: "active",
-    },
-    joinedAt: {
-      type: Date,
-      default: Date.now,
+      enum: ["Propietario", "Administrador", "Miembro", "owner", "admin", "member"],
+      default: "Miembro",
     },
   },
   {
@@ -53,13 +41,22 @@ const workspaceSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    ownerName: {
+      type: String,
+      default: "Usuario",
+    },
+    ownerEmail: {
+      type: String,
+      default: "",
+    },
     members: {
-      type: [workspaceMemberSchema],
+      type: [memberSchema],
       default: [],
     },
-    isActive: {
-      type: Boolean,
-      default: true,
+    status: {
+      type: String,
+      enum: ["Activo", "Archivado", "active", "archived"],
+      default: "Activo",
     },
   },
   {
@@ -67,4 +64,6 @@ const workspaceSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("Workspace", workspaceSchema);
+const Workspace = mongoose.model("Workspace", workspaceSchema);
+
+export default Workspace;

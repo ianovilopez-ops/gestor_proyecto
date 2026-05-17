@@ -7,7 +7,7 @@ const fileSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    fileName: {
+    filename: {
       type: String,
       required: true,
       trim: true,
@@ -24,26 +24,37 @@ const fileSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    url: {
+      type: String,
+      default: "",
+    },
     uploadedBy: {
-      type: String,
-      required: true,
+      userId: {
+        type: String,
+        default: "dev-user",
+      },
+      name: {
+        type: String,
+        default: "Usuario",
+      },
+      email: {
+        type: String,
+        default: "",
+      },
     },
-    projectId: {
+    relatedType: {
       type: String,
-      default: null,
+      enum: ["general", "workspace", "board", "task", "message"],
+      default: "general",
     },
-    taskId: {
+    relatedId: {
       type: String,
-      default: null,
-    },
-    messageId: {
-      type: String,
-      default: null,
+      default: "",
     },
     visibility: {
       type: String,
-      enum: ["project", "task", "message", "private"],
-      default: "private",
+      enum: ["public", "private", "team"],
+      default: "team",
     },
   },
   {

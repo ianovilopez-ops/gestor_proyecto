@@ -1,5 +1,8 @@
 import { Message } from "../models/Message.js";
 
+const NOTIFICATION_SERVICE_URL =
+  process.env.NOTIFICATION_SERVICE_URL || "http://localhost:3007";
+
 function getUserFromRequest(req) {
   return {
     id: req.headers["x-user-id"] || "",
@@ -11,6 +14,21 @@ function getUserFromRequest(req) {
 
 function buildConversationKey(userA, userB) {
   return [userA, userB].sort().join(":");
+}
+
+async function createNotification(payload) {
+  try {
+    await fetch(`${NOTIFICATION_SERVICE_URL}/notifications`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": payload.userId || "dev-user",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.error("Error enviando notificación de mensaje:", error.message);
+  }
 }
 
 export async function sendMessage(req, res) {
@@ -65,6 +83,23 @@ export async function sendMessage(req, res) {
       content: content.trim(),
       boardId,
       read: false,
+    });
+
+    await createNotification({
+      userId: receiverId,
+      title: `Nuevo mensaje de ${sender.name}`,
+      message: content.trim().slice(0, 120),
+      type: "message",
+      relatedId: message._id.toString(),
+      relatedType: "message",
+      priority: "Media",
+      dedupeKey: `${message._id}-message-received`,
+      metadata: {
+        senderId: sender.id,
+        senderName: sender.name,
+        boardId,
+        messageId: message._id.toString(),
+      },
     });
 
     return res.status(201).json({

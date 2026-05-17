@@ -2,6 +2,8 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 
 import {
+  changePassword,
+  deleteUser,
   getUserById,
   getUsers,
   login,
@@ -50,5 +52,7 @@ router.post("/login", login);
 router.get("/me", authMiddleware, me);
 router.get("/users", authMiddleware, getUsers);
 router.get("/users/:id", authMiddleware, getUserById);
+router.delete("/users/:id", authMiddleware, deleteUser);
+router.patch("/change-password", authMiddleware, changePassword);
 
 export default router;

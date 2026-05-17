@@ -8,9 +8,7 @@ async function request(endpoint, options = {}) {
   const response = await fetch(`${API_URL}${endpoint}`, {
     headers: {
       "Content-Type": "application/json",
-      ...(token && {
-        Authorization: `Bearer ${token}`,
-      }),
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...(options.headers || {}),
     },
     ...options,
@@ -19,7 +17,7 @@ async function request(endpoint, options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || "Error en la petición.");
+    throw new Error(data.message || "Error en servicio de usuarios.");
   }
 
   return data;
@@ -27,26 +25,22 @@ async function request(endpoint, options = {}) {
 
 export async function getUsers(search = "") {
   const query = search ? `?search=${encodeURIComponent(search)}` : "";
-
-  return request(`/api/users${query}`, {
-    method: "GET",
-  });
+  return request(`/api/users${query}`);
 }
 
 export async function getUserById(userId) {
-  return request(`/api/users/${userId}`, {
-    method: "GET",
+  return request(`/api/users/${userId}`);
+}
+
+export async function createUser(userData) {
+  return request("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify(userData),
   });
 }
 
-export async function createUser({ name, email, password, role }) {
-  return request("/api/auth/register", {
-    method: "POST",
-    body: JSON.stringify({
-      name,
-      email,
-      password,
-      role,
-    }),
+export async function deleteUser(userId) {
+  return request(`/api/users/${userId}`, {
+    method: "DELETE",
   });
 }

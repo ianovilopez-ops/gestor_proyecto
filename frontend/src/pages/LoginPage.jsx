@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   Alert,
@@ -8,11 +8,7 @@ import {
   Card,
   CardContent,
   CircularProgress,
-  FormControl,
-  InputLabel,
   LinearProgress,
-  MenuItem,
-  Select,
   Stack,
   Tab,
   Tabs,
@@ -24,19 +20,38 @@ import { loginUser, registerUser, saveSession } from "../services/authService.js
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState(
+    location.pathname === "/register" ? "register" : "login"
+  );
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
     name: "",
-    email: "ian@test.com",
-    password: "123456",
-    role: "Miembro",
+    email: "",
+    password: "",
   });
 
   const isLogin = mode === "login";
+
+  useEffect(() => {
+    setMode(location.pathname === "/register" ? "register" : "login");
+    setError("");
+  }, [location.pathname]);
+
+  function handleModeChange(value) {
+    if (loading) return;
+
+    setMode(value);
+    setError("");
+
+    navigate(value === "register" ? "/register" : "/login", {
+      replace: true,
+    });
+  }
 
   const handleChange = (field, value) => {
     setForm((prev) => ({
@@ -63,7 +78,7 @@ export function LoginPage() {
             name: form.name,
             email: form.email,
             password: form.password,
-            role: form.role,
+            role: "Propietario",
           });
 
       saveSession({
@@ -96,16 +111,14 @@ export function LoginPage() {
           </Typography>
 
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Accede a tu workspace colaborativo.
+            {isLogin
+              ? "Inicia sesión para acceder a tu workspace."
+              : "Crea tu cuenta para comenzar en NexusFlow."}
           </Typography>
 
           <Tabs
             value={mode}
-            onChange={(_, value) => {
-              if (loading) return;
-              setMode(value);
-              setError("");
-            }}
+            onChange={(_, value) => handleModeChange(value)}
             sx={{ mb: 3 }}
           >
             <Tab label="Iniciar sesión" value="login" />
@@ -115,6 +128,7 @@ export function LoginPage() {
           {loading && (
             <Box sx={{ mb: 2 }}>
               <LinearProgress />
+
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 Conectando con el servidor...
               </Typography>
@@ -155,30 +169,10 @@ export function LoginPage() {
                 type="password"
                 fullWidth
                 value={form.password}
-                onChange={(event) =>
-                  handleChange("password", event.target.value)
-                }
+                onChange={(event) => handleChange("password", event.target.value)}
                 disabled={loading}
                 required
               />
-
-              {!isLogin && (
-                <FormControl fullWidth disabled={loading}>
-                  <InputLabel>Rol</InputLabel>
-                  <Select
-                    label="Rol"
-                    value={form.role}
-                    onChange={(event) =>
-                      handleChange("role", event.target.value)
-                    }
-                  >
-                    <MenuItem value="Propietario">Propietario</MenuItem>
-                    <MenuItem value="Administrador">Administrador</MenuItem>
-                    <MenuItem value="Miembro">Miembro</MenuItem>
-                    <MenuItem value="Observador">Observador</MenuItem>
-                  </Select>
-                </FormControl>
-              )}
 
               <Button
                 variant="contained"

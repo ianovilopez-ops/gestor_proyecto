@@ -27,7 +27,13 @@ const FILE_SERVICE_URL =
 const MESSAGE_SERVICE_URL =
   process.env.MESSAGE_SERVICE_URL || "http://localhost:3006";
 
+const WORKSPACE_SERVICE_URL =
+  process.env.WORKSPACE_SERVICE_URL || "http://localhost:3008";
+
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
+
+const NOTIFICATION_SERVICE_URL =
+  process.env.NOTIFICATION_SERVICE_URL || "http://localhost:3007";
 
 app.use(
   helmet({
@@ -68,7 +74,7 @@ function authMiddleware(req, res, next) {
     req.headers["x-user-role"] = decoded.role || "";
 
     return next();
-  } catch {
+  } catch (error) {
     return res.status(401).json({
       ok: false,
       message: "Token inválido o expirado.",
@@ -78,11 +84,15 @@ function authMiddleware(req, res, next) {
 
 async function forwardRequest(req, res, targetUrl) {
   try {
-    console.log(`[FORWARD] ${req.method} ${req.originalUrl} -> ${targetUrl}`);
+    console.log(
+      `[FORWARD] ${req.method} ${req.originalUrl} -> ${targetUrl}`
+    );
 
-    const headers = {
-      "Content-Type": "application/json",
-    };
+    const headers = {};
+
+    if (!(req.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
 
     if (req.headers.authorization) {
       headers.Authorization = req.headers.authorization;
@@ -114,6 +124,7 @@ async function forwardRequest(req, res, targetUrl) {
     }
 
     const response = await fetch(targetUrl, options);
+
     const contentType = response.headers.get("content-type") || "";
 
     res.status(response.status);
@@ -137,7 +148,9 @@ async function forwardRequest(req, res, targetUrl) {
 }
 
 /*
-  HEALTH GATEWAY
+|--------------------------------------------------------------------------
+| ROOT
+|--------------------------------------------------------------------------
 */
 
 app.get("/", (req, res) => {
@@ -158,7 +171,9 @@ app.get("/health", (req, res) => {
 });
 
 /*
-  AUTH SERVICE
+|--------------------------------------------------------------------------
+| AUTH SERVICE
+|--------------------------------------------------------------------------
 */
 
 app.get("/api/auth/health", (req, res) => {
@@ -176,17 +191,22 @@ app.post("/api/auth/login", (req, res) => {
 app.get("/api/auth/me", authMiddleware, (req, res) => {
   return forwardRequest(req, res, `${AUTH_SERVICE_URL}/auth/me`);
 });
+app.patch("/api/auth/change-password", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${AUTH_SERVICE_URL}/auth/change-password`
+  );
+});
 
 app.get("/api/auth/users", authMiddleware, (req, res) => {
-  const query = req.originalUrl.includes("?")
-    ? `?${req.originalUrl.split("?")[1]}`
-    : "";
-
-  return forwardRequest(req, res, `${AUTH_SERVICE_URL}/auth/users${query}`);
+  return forwardRequest(req, res, `${AUTH_SERVICE_URL}/auth/users`);
 });
 
 /*
-  USERS / TEAM
+|--------------------------------------------------------------------------
+| USERS
+|--------------------------------------------------------------------------
 */
 
 app.get("/api/users", authMiddleware, (req, res) => {
@@ -194,7 +214,11 @@ app.get("/api/users", authMiddleware, (req, res) => {
     ? `?${req.originalUrl.split("?")[1]}`
     : "";
 
-  return forwardRequest(req, res, `${AUTH_SERVICE_URL}/auth/users${query}`);
+  return forwardRequest(
+    req,
+    res,
+    `${AUTH_SERVICE_URL}/auth/users${query}`
+  );
 });
 
 app.get("/api/users/:id", authMiddleware, (req, res) => {
@@ -205,45 +229,39 @@ app.get("/api/users/:id", authMiddleware, (req, res) => {
   );
 });
 
+app.delete("/api/users/:id", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${AUTH_SERVICE_URL}/auth/users/${req.params.id}`
+  );
+});
+
 /*
-  BOARD SERVICE
+|--------------------------------------------------------------------------
+| BOARD SERVICE
+|--------------------------------------------------------------------------
 */
 
 app.get("/api/boards/health", (req, res) => {
   return forwardRequest(req, res, `${BOARD_SERVICE_URL}/boards/health`);
 });
 
+app.get("/api/boards", authMiddleware, (req, res) => {
+  const query = req.originalUrl.includes("?")
+    ? `?${req.originalUrl.split("?")[1]}`
+    : "";
+
+  return forwardRequest(
+    req,
+    res,
+    `${BOARD_SERVICE_URL}/boards${query}`
+  );
+});
+
 app.post("/api/boards", authMiddleware, (req, res) => {
   return forwardRequest(req, res, `${BOARD_SERVICE_URL}/boards`);
 });
-
-app.get("/api/boards", authMiddleware, (req, res) => {
-  return forwardRequest(req, res, `${BOARD_SERVICE_URL}/boards`);
-});
-
-/*
-  MEMBERS DEL TABLERO
-*/
-
-app.patch("/api/boards/:id/members", authMiddleware, (req, res) => {
-  return forwardRequest(
-    req,
-    res,
-    `${BOARD_SERVICE_URL}/boards/${req.params.id}/members`
-  );
-});
-
-app.delete("/api/boards/:id/members/:userId", authMiddleware, (req, res) => {
-  return forwardRequest(
-    req,
-    res,
-    `${BOARD_SERVICE_URL}/boards/${req.params.id}/members/${req.params.userId}`
-  );
-});
-
-/*
-  BOARD BY ID
-*/
 
 app.get("/api/boards/:id", authMiddleware, (req, res) => {
   return forwardRequest(
@@ -269,8 +287,30 @@ app.delete("/api/boards/:id", authMiddleware, (req, res) => {
   );
 });
 
+app.patch("/api/boards/:id/members", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${BOARD_SERVICE_URL}/boards/${req.params.id}/members`
+  );
+});
+
+app.delete(
+  "/api/boards/:id/members/:userId",
+  authMiddleware,
+  (req, res) => {
+    return forwardRequest(
+      req,
+      res,
+      `${BOARD_SERVICE_URL}/boards/${req.params.id}/members/${req.params.userId}`
+    );
+  }
+);
+
 /*
-  TASK SERVICE
+|--------------------------------------------------------------------------
+| TASK SERVICE
+|--------------------------------------------------------------------------
 */
 
 app.get("/api/tasks/health", (req, res) => {
@@ -290,11 +330,19 @@ app.get("/api/tasks/board/:boardId", authMiddleware, (req, res) => {
 });
 
 app.get("/api/tasks/:id", authMiddleware, (req, res) => {
-  return forwardRequest(req, res, `${TASK_SERVICE_URL}/tasks/${req.params.id}`);
+  return forwardRequest(
+    req,
+    res,
+    `${TASK_SERVICE_URL}/tasks/${req.params.id}`
+  );
 });
 
 app.put("/api/tasks/:id", authMiddleware, (req, res) => {
-  return forwardRequest(req, res, `${TASK_SERVICE_URL}/tasks/${req.params.id}`);
+  return forwardRequest(
+    req,
+    res,
+    `${TASK_SERVICE_URL}/tasks/${req.params.id}`
+  );
 });
 
 app.patch("/api/tasks/:id/status", authMiddleware, (req, res) => {
@@ -306,11 +354,76 @@ app.patch("/api/tasks/:id/status", authMiddleware, (req, res) => {
 });
 
 app.delete("/api/tasks/:id", authMiddleware, (req, res) => {
-  return forwardRequest(req, res, `${TASK_SERVICE_URL}/tasks/${req.params.id}`);
+  return forwardRequest(
+    req,
+    res,
+    `${TASK_SERVICE_URL}/tasks/${req.params.id}`
+  );
 });
 
 /*
-  MESSAGE SERVICE
+|--------------------------------------------------------------------------
+| FILE SERVICE
+|--------------------------------------------------------------------------
+*/
+
+app.get("/api/files/health", (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${FILE_SERVICE_URL}/api/files/health`
+  );
+});
+
+app.post("/api/files/upload", authMiddleware, (req, res) => {
+  return res.status(501).json({
+    ok: false,
+    message:
+      "La subida multipart todavía debe hacerse directo al file-service.",
+    directUploadUrl: `${FILE_SERVICE_URL}/api/files/upload`,
+  });
+});
+
+app.get("/api/files", authMiddleware, (req, res) => {
+  const query = req.originalUrl.includes("?")
+    ? `?${req.originalUrl.split("?")[1]}`
+    : "";
+
+  return forwardRequest(
+    req,
+    res,
+    `${FILE_SERVICE_URL}/api/files${query}`
+  );
+});
+
+app.get("/api/files/:id", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${FILE_SERVICE_URL}/api/files/${req.params.id}`
+  );
+});
+
+app.get("/api/files/:id/download", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${FILE_SERVICE_URL}/api/files/${req.params.id}/download`
+  );
+});
+
+app.delete("/api/files/:id", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${FILE_SERVICE_URL}/api/files/${req.params.id}`
+  );
+});
+
+/*
+|--------------------------------------------------------------------------
+| MESSAGE SERVICE
+|--------------------------------------------------------------------------
 */
 
 app.get("/api/messages/health", (req, res) => {
@@ -337,13 +450,17 @@ app.post("/api/messages", authMiddleware, (req, res) => {
   return forwardRequest(req, res, `${MESSAGE_SERVICE_URL}/messages`);
 });
 
-app.patch("/api/messages/:messageId/read", authMiddleware, (req, res) => {
-  return forwardRequest(
-    req,
-    res,
-    `${MESSAGE_SERVICE_URL}/messages/${req.params.messageId}/read`
-  );
-});
+app.patch(
+  "/api/messages/:messageId/read",
+  authMiddleware,
+  (req, res) => {
+    return forwardRequest(
+      req,
+      res,
+      `${MESSAGE_SERVICE_URL}/messages/${req.params.messageId}/read`
+    );
+  }
+);
 
 app.delete("/api/messages/:messageId", authMiddleware, (req, res) => {
   return forwardRequest(
@@ -354,15 +471,141 @@ app.delete("/api/messages/:messageId", authMiddleware, (req, res) => {
 });
 
 /*
-  FILE SERVICE
+|--------------------------------------------------------------------------
+| WORKSPACE SERVICE
+|--------------------------------------------------------------------------
 */
 
-app.get("/api/files/health", (req, res) => {
-  return forwardRequest(req, res, `${FILE_SERVICE_URL}/files/health`);
+app.get("/api/workspaces/health", (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${WORKSPACE_SERVICE_URL}/workspace/health`
+  );
+});
+
+app.get("/api/workspaces", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${WORKSPACE_SERVICE_URL}/api/workspaces`
+  );
+});
+
+app.post("/api/workspaces", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${WORKSPACE_SERVICE_URL}/api/workspaces`
+  );
+});
+
+app.patch(
+  "/api/workspaces/:id/members",
+  authMiddleware,
+  (req, res) => {
+    return forwardRequest(
+      req,
+      res,
+      `${WORKSPACE_SERVICE_URL}/api/workspaces/${req.params.id}/members`
+    );
+  }
+);
+
+app.delete(
+  "/api/workspaces/:id/members/:userId",
+  authMiddleware,
+  (req, res) => {
+    return forwardRequest(
+      req,
+      res,
+      `${WORKSPACE_SERVICE_URL}/api/workspaces/${req.params.id}/members/${req.params.userId}`
+    );
+  }
+);
+
+app.get("/api/workspaces/:id", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${WORKSPACE_SERVICE_URL}/api/workspaces/${req.params.id}`
+  );
+});
+
+app.put("/api/workspaces/:id", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${WORKSPACE_SERVICE_URL}/api/workspaces/${req.params.id}`
+  );
+});
+
+app.delete("/api/workspaces/:id", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${WORKSPACE_SERVICE_URL}/api/workspaces/${req.params.id}`
+  );
 });
 
 /*
-  RUTA NO ENCONTRADA
+|--------------------------------------------------------------------------
+| NOTIFICATION SERVICE
+|--------------------------------------------------------------------------
+*/
+
+app.get("/api/notifications/health", (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${NOTIFICATION_SERVICE_URL}/notifications/health`
+  );
+});
+
+app.get("/api/notifications", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${NOTIFICATION_SERVICE_URL}/notifications`
+  );
+});
+
+app.post("/api/notifications", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${NOTIFICATION_SERVICE_URL}/notifications`
+  );
+});
+
+app.patch("/api/notifications/read-all", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${NOTIFICATION_SERVICE_URL}/notifications/read-all`
+  );
+});
+
+app.patch("/api/notifications/:id/read", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${NOTIFICATION_SERVICE_URL}/notifications/${req.params.id}/read`
+  );
+});
+
+app.delete("/api/notifications/:id", authMiddleware, (req, res) => {
+  return forwardRequest(
+    req,
+    res,
+    `${NOTIFICATION_SERVICE_URL}/notifications/${req.params.id}`
+  );
+});
+
+/*
+|--------------------------------------------------------------------------
+| NOT FOUND
+|--------------------------------------------------------------------------
 */
 
 app.use((req, res) => {
@@ -374,13 +617,15 @@ app.use((req, res) => {
 });
 
 /*
-  MANEJO DE ERRORES
+|--------------------------------------------------------------------------
+| ERROR HANDLER
+|--------------------------------------------------------------------------
 */
 
 app.use((error, req, res, next) => {
   console.error("Error en API Gateway:", error);
 
-  res.status(500).json({
+  return res.status(500).json({
     ok: false,
     message: "Error interno en API Gateway.",
   });
@@ -389,4 +634,10 @@ app.use((error, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`API Gateway corriendo en http://localhost:${PORT}`);
   console.log(`Frontend permitido: ${FRONTEND_URL}`);
+  console.log(`Auth Service: ${AUTH_SERVICE_URL}`);
+  console.log(`Board Service: ${BOARD_SERVICE_URL}`);
+  console.log(`Task Service: ${TASK_SERVICE_URL}`);
+  console.log(`File Service: ${FILE_SERVICE_URL}`);
+  console.log(`Message Service: ${MESSAGE_SERVICE_URL}`);
+  console.log(`Workspace Service: ${WORKSPACE_SERVICE_URL}`);
 });

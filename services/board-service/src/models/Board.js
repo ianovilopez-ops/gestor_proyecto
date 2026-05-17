@@ -1,10 +1,54 @@
 import mongoose from "mongoose";
 
+const memberSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: String,
+      required: true,
+    },
+    name: {
+      type: String,
+      default: "Usuario",
+    },
+    email: {
+      type: String,
+      default: "",
+    },
+    role: {
+      type: String,
+      default: "Miembro",
+    },
+  },
+  {
+    _id: false,
+  }
+);
+
+const columnSchema = new mongoose.Schema(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+    },
+    order: {
+      type: Number,
+      default: 1,
+    },
+  },
+  {
+    _id: false,
+  }
+);
+
 const boardSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "El nombre del tablero es obligatorio"],
+      required: true,
       trim: true,
     },
     description: {
@@ -19,8 +63,12 @@ const boardSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Pendiente", "En proceso", "Avanzado", "Completado"],
       default: "Pendiente",
+    },
+    workspaceId: {
+      type: String,
+      default: "",
+      index: true,
     },
     ownerId: {
       type: String,
@@ -30,25 +78,14 @@ const boardSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    members: [
-      {
-        userId: String,
-        name: String,
-        email: String,
-        role: {
-          type: String,
-          enum: ["Propietario", "Administrador", "Miembro", "Observador"],
-          default: "Miembro",
-        },
-      },
-    ],
-    columns: [
-      {
-        id: String,
-        title: String,
-        order: Number,
-      },
-    ],
+    members: {
+      type: [memberSchema],
+      default: [],
+    },
+    columns: {
+      type: [columnSchema],
+      default: [],
+    },
   },
   {
     timestamps: true,

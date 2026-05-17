@@ -50,7 +50,9 @@ export async function register(req, res) {
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
       return res.status(409).json({
@@ -62,8 +64,8 @@ export async function register(req, res) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       passwordHash,
       role: role || "Miembro",
     });
@@ -97,7 +99,9 @@ export async function login(req, res) {
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+    });
 
     if (!user) {
       return res.status(401).json({
@@ -196,6 +200,110 @@ export async function getUserById(req, res) {
     return res.status(500).json({
       ok: false,
       message: "Error interno al obtener usuario.",
+    });
+  }
+}
+
+export async function deleteUser(req, res) {
+  try {
+    const { id } = req.params;
+    const requester = req.user;
+
+    if (String(requester.id) === String(id)) {
+      return res.status(400).json({
+        ok: false,
+        message: "No puedes eliminar tu propio usuario.",
+      });
+    }
+
+    if (
+      requester.role !== "Propietario" &&
+      requester.role !== "Administrador"
+    ) {
+      return res.status(403).json({
+        ok: false,
+        message: "No tienes permisos para eliminar usuarios.",
+      });
+    }
+
+    const user = await User.findByIdAndDelete(id).select("-passwordHash");
+
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        message: "Usuario no encontrado.",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      message: "Usuario eliminado correctamente.",
+      user,
+    });
+  } catch (error) {
+    console.error("Error en deleteUser:", error);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Error interno al eliminar usuario.",
+    });
+  }
+}
+
+export async function changePassword(req, res) {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        ok: false,
+        message: "Contraseña actual y nueva contraseña son obligatorias.",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        ok: false,
+        message: "La nueva contraseña debe tener al menos 6 caracteres.",
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        message: "Usuario no encontrado.",
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash
+    );
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        ok: false,
+        message: "La contraseña actual no es correcta.",
+      });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await user.save();
+
+    return res.json({
+      ok: true,
+      message: "Contraseña actualizada correctamente.",
+    });
+  } catch (error) {
+    console.error("Error en changePassword:", error);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Error interno al cambiar contraseña.",
     });
   }
 }

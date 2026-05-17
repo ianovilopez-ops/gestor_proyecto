@@ -1,25 +1,23 @@
-const express = require("express");
-
-const {
+import express from "express";
+import {
   createWorkspace,
   getWorkspaces,
   getWorkspaceById,
   updateWorkspace,
   deleteWorkspace,
-  addMemberToWorkspace,
-  updateMemberRole,
-  removeMemberFromWorkspace,
-} = require("../controllers/workspace.controller");
+  addWorkspaceMember,
+  removeWorkspaceMember,
+} from "../controllers/workspace.controller.js";
 
 const router = express.Router();
 
-router.post("/", createWorkspace);
 router.get("/", getWorkspaces);
+router.post("/", createWorkspace);
 router.get("/:id", getWorkspaceById);
 router.put("/:id", updateWorkspace);
 router.delete("/:id", deleteWorkspace);
-router.post("/:id/members", addMemberToWorkspace);
-router.patch("/:id/members/:memberUserId/role", updateMemberRole);
-router.delete("/:id/members/:memberUserId", removeMemberFromWorkspace);
 
-module.exports = router;
+router.patch("/:id/members", addWorkspaceMember);
+router.delete("/:id/members/:userId", removeWorkspaceMember);
+
+export default router;
