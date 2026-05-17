@@ -5,6 +5,7 @@ import AddIcon from "@mui/icons-material/Add";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import AutoGraphIcon from "@mui/icons-material/AutoGraph";
+import DeleteIcon from "@mui/icons-material/Delete";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import GroupsIcon from "@mui/icons-material/Groups";
 import PendingActionsIcon from "@mui/icons-material/PendingActions";
@@ -40,7 +41,11 @@ import {
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 
-import { createBoard, getBoards } from "../services/boardService.js";
+import {
+  createBoard,
+  deleteBoard,
+  getBoards,
+} from "../services/boardService.js";
 import { getTasksByBoard } from "../services/taskService.js";
 
 function getStatusColor(status) {
@@ -126,6 +131,7 @@ export function BoardsPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [loadingBoards, setLoadingBoards] = useState(true);
   const [savingBoard, setSavingBoard] = useState(false);
+  const [deletingBoardId, setDeletingBoardId] = useState("");
   const [error, setError] = useState("");
 
   const [form, setForm] = useState({
@@ -199,10 +205,8 @@ export function BoardsPage() {
       `.toLowerCase();
 
       const matchesSearch = text.includes(search.toLowerCase());
-
       const matchesStatus =
         statusFilter === "Todos" || board.status === statusFilter;
-
       const matchesArea = areaFilter === "Todas" || board.area === areaFilter;
 
       return matchesSearch && matchesStatus && matchesArea;
@@ -285,6 +289,35 @@ export function BoardsPage() {
       setError(error.message || "No se pudo crear el tablero.");
     } finally {
       setSavingBoard(false);
+    }
+  };
+
+  const handleDeleteBoard = async (boardId) => {
+    const confirmed = window.confirm(
+      "¿Seguro que quieres eliminar este tablero?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingBoardId(boardId);
+      setError("");
+
+      await deleteBoard(boardId);
+
+      setBoards((prevBoards) =>
+        prevBoards.filter((board) => board._id !== boardId)
+      );
+
+      setTasksByBoard((prevTasksByBoard) => {
+        const copy = { ...prevTasksByBoard };
+        delete copy[boardId];
+        return copy;
+      });
+    } catch (error) {
+      setError(error.message || "No se pudo eliminar el tablero.");
+    } finally {
+      setDeletingBoardId("");
     }
   };
 
@@ -455,21 +488,23 @@ export function BoardsPage() {
               alignItems: "center",
             }}
           >
-        <TextField
-          placeholder="Buscar tablero..."
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            },
-          }}
-          sx={{
-            minWidth: 260,
-          }}
-        />
+            <TextField
+              placeholder="Buscar tablero..."
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                },
+              }}
+              sx={{
+                minWidth: 260,
+              }}
+            />
 
             <FormControl fullWidth>
               <InputLabel>Estado</InputLabel>
@@ -582,11 +617,32 @@ export function BoardsPage() {
                         <FolderOpenIcon />
                       </Box>
 
-                      <Chip
-                        label={board.status || "Pendiente"}
-                        color={getStatusColor(board.status)}
-                        size="small"
-                      />
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Chip
+                          label={board.status || "Pendiente"}
+                          color={getStatusColor(board.status)}
+                          size="small"
+                        />
+
+                        <Tooltip title="Eliminar tablero">
+                          <span>
+                            <IconButton
+                              color="error"
+                              disabled={deletingBoardId === board._id}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleDeleteBoard(board._id);
+                              }}
+                            >
+                              {deletingBoardId === board._id ? (
+                                <CircularProgress size={20} />
+                              ) : (
+                                <DeleteIcon />
+                              )}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Stack>
                     </Box>
 
                     <Typography
