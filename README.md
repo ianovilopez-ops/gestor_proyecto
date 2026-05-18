@@ -122,7 +122,7 @@ docker compose up --build
 
 ---
 
-# 🌐 Acceso al Proyecto
+# Acceso al Proyecto
 
 | Servicio | URL |
 |---|---|
@@ -131,7 +131,7 @@ docker compose up --build
 
 ---
 
-# 📸 Capturas del Sistema
+# Capturas del Sistema
 
 ## Dashboard
 <img src="./frontend/src/assets/Dashboard.png">
@@ -179,7 +179,7 @@ El sistema implementa:
 
 ---
 
-# 📡 Comunicación en Tiempo Real
+# Comunicación en Tiempo Real
 
 NexusFlow utiliza:
 
@@ -190,7 +190,7 @@ NexusFlow utiliza:
 
 ---
 
-# 📂 Docker Services
+# Docker Services
 
 Para visualizar contenedores:
 
@@ -206,9 +206,9 @@ docker compose down
 
 ---
 
-# 🧪 Estado del Proyecto
+# Estado del Proyecto
 
-🚧 Proyecto en desarrollo activo.
+ Proyecto en desarrollo activo.
 
 Funciones futuras:
 
@@ -253,6 +253,6 @@ Funciones futuras:
 
 ---
 
-# 📄 Licencia
+# Licencia
 
 Este proyecto es únicamente educativo y de aprendizaje.
