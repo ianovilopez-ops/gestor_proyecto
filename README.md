@@ -140,31 +140,31 @@ docker compose up --build
 <img src="./frontend/src/assets/tableros.png">
 
 ## Mis tareas
-<img src="./frontend/src/assets/Mis tareas.png>
+<img src="./frontend/src/assets/Mis tareas.png">
 
-## Mis tareas
-<img src="./frontend/src/assets/Notificaciones.png>
+## Notificaciones
+<img src="./frontend/src/assets/Notificaciones.png">
 
 ## Mensajes
-<img src="./frontend/src/assets/Mensajes.png>
+<img src="./frontend/src/assets/Mensajes.png">
 
-## Mis tareas
-<img src="./frontend/src/assets/Equipo.png>
+## Equipo
+<img src="./frontend/src/assets/Equipo.png">
 
-<img src="./frontend/src/assets/Equipo_miembros.png>
-
-## Ajustes
-<img src="./frontend/src/assets/Ajustes_perfil.png>
-
+<img src="./frontend/src/assets/Equipo_miembros.png">
 
 ## Ajustes
-<img src="./frontend/src/assets/Notificaciones_boton.png>
+<img src="./frontend/src/assets/Ajustes_perfil.png">
+
+
+## Ajustes/notificaciones
+<img src="./frontend/src/assets/Notificaciones_boton.png">
 
 ## Ajustes/apariencia
-<img src="./frontend/src/assets/Ajustes_apariencia.png>
+<img src="./frontend/src/assets/Ajustes_apariencia.png">
 
-## Ajustes
-<img src="./frontend/src/assets/Ajustes_seguridad.png>
+## Ajustes/seguridad
+<img src="./frontend/src/assets/Ajustes_seguridad.png">
 
 ---
 
