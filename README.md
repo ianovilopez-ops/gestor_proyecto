@@ -134,17 +134,37 @@ docker compose up --build
 # 📸 Capturas del Sistema
 
 ## Dashboard
-<img src="./screenshots/dashboard.png">
+<img src="./frontend/src/assets/Dashboard.png">
 
-## Boards
-<img src="./screenshots/boards.png">
+## Tableros
+<img src="./frontend/src/assets/tableros.png">
 
-## Tasks
-<img src="./screenshots/tasks.png">
+## Mis tareas
+<img src="./frontend/src/assets/Mis tareas.png>
+
+## Mis tareas
+<img src="./frontend/src/assets/Notificaciones.png>
+
+## Mensajes
+<img src="./frontend/src/assets/Mensajes.png>
+
+## Mis tareas
+<img src="./frontend/src/assets/Equipo.png>
+
+<img src="./frontend/src/assets/Equipo_miembros.png>
+
+## Ajustes
+<img src="./frontend/src/assets/Ajustes_perfil.png>
+
+## Ajustes/apariencia
+<img src="./frontend/src/assets/Ajustes_apariencia.png>
+
+## Ajustes
+<img src="./frontend/src/assets/Ajustes_seguridad.png>
 
 ---
 
-# 🔐 Autenticación
+# Autenticación
 
 El sistema implementa:
 
@@ -197,9 +217,6 @@ Funciones futuras:
 ---
 
 # Créditos
-
-## 👨‍💻 Créditos
-
 
 <table>
   <thead>
