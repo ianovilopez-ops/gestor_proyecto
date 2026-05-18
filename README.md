@@ -11,7 +11,7 @@
 
 ---
 
-## 📌 Características
+## Características
 
 - ✅ Gestión de proyectos y tableros
 - ✅ Gestión de tareas en tiempo real
@@ -22,12 +22,11 @@
 - ✅ Docker Compose
 - ✅ MongoDB
 - ✅ Frontend React + Vite
-- ✅ Diseño moderno tipo SaaS
 - ✅ Sistema colaborativo multiusuario
 
 ---
 
-# 🏗️ Arquitectura del Proyecto
+#  Arquitectura del Proyecto
 
 ```bash
 NexusFlow/
@@ -50,7 +49,7 @@ NexusFlow/
 
 ---
 
-# ⚙️ Tecnologías Utilizadas
+# Tecnologías Utilizadas
 
 ## Frontend
 - React
@@ -75,7 +74,7 @@ NexusFlow/
 
 ---
 
-# 🧠 Arquitectura de Microservicios
+# Arquitectura de Microservicios
 
 | Servicio | Puerto | Función |
 |---|---|---|
@@ -91,7 +90,7 @@ NexusFlow/
 
 ---
 
-# 🐳 Instalación con Docker
+# Instalación con Docker
 
 ## Clonar repositorio
 
@@ -197,11 +196,41 @@ Funciones futuras:
 
 ---
 
-# 👨‍💻 Autor
+# Créditos
 
-## Ian
+## 👨‍💻 Créditos
 
-Estudiante de Ingeniería en Sistemas.
+
+<table>
+  <thead>
+    <tr>
+      <th align="center">Integrante</th>
+      <th align="center">Rol</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Hiromi Castillo Sandoval</td>
+      <td>Desarrollo frontend</td>
+    </tr>
+    <tr>
+      <td>Jacqueline Gomez Estrada</td>
+      <td>Desarrollo de backend</td>
+    </tr>
+    <tr>
+      <td>Juan Manuel Juarez Garcia</td>
+      <td>Desarrollo backend</td>
+    </tr>
+    <tr>
+      <td>Karen Abigail Oliva Barrera</td>
+      <td>Desarrollo fronted</td>
+    </tr>
+    <tr>
+      <td>Ian Alexander Oviedo Lopez</td>
+      <td>Lider de proyecto</td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
