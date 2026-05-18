@@ -1,7 +1,7 @@
 # 🚀 NexusFlow - Plataforma de Gestión de Proyectos
 
 <p align="center">
-  <img src="./frontend/src/assets/PantallaInicial.png" width="300">
+  <img src="./frontend/src/assets/PantallaInicial.png" >
 </p>
 
 <p align="center">
