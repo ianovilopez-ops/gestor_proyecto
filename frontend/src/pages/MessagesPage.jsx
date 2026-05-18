@@ -20,6 +20,7 @@ import messageService from "../services/messageService";
 import { getUsers } from "../services/teamService";
 import { getCurrentUser } from "../services/authService";
 import { connectSocket } from "../services/socketService";
+import { createNotification } from "../services/notificationService.js";
 
 export default function MessagesPage() {
   const currentUser = useMemo(() => getCurrentUser(), []);
@@ -115,7 +116,7 @@ export default function MessagesPage() {
       setLoadingMessages(true);
       setError("");
 
-      const data = await messageService.getMessages(user._id);
+      const data = await messageService.getMessages(user._id || user.id);
       setMessages(data.messages || []);
     } catch (error) {
       console.error("Error cargando mensajes:", error);
@@ -129,6 +130,7 @@ export default function MessagesPage() {
     if (!newMessage.trim() || !selectedUser) return;
 
     const content = newMessage.trim();
+    const receiverId = selectedUser._id || selectedUser.id;
 
     try {
       setError("");
@@ -136,17 +138,19 @@ export default function MessagesPage() {
 
       const response = await messageService.sendMessage(selectedUser, content);
 
-      const savedMessage = response.data || response.message || {
-        _id: crypto.randomUUID(),
-        senderId: currentUserId,
-        senderName: currentUser?.name || "Yo",
-        senderEmail: currentUser?.email || "",
-        receiverId: selectedUser._id,
-        receiverName: selectedUser.name,
-        receiverEmail: selectedUser.email,
-        content,
-        createdAt: new Date().toISOString(),
-      };
+      const savedMessage =
+        response.data ||
+        response.message || {
+          _id: crypto.randomUUID(),
+          senderId: currentUserId,
+          senderName: currentUser?.name || "Yo",
+          senderEmail: currentUser?.email || "",
+          receiverId,
+          receiverName: selectedUser.name,
+          receiverEmail: selectedUser.email,
+          content,
+          createdAt: new Date().toISOString(),
+        };
 
       setMessages((prev) => {
         const exists = prev.some(
@@ -160,7 +164,39 @@ export default function MessagesPage() {
       });
 
       const socket = connectSocket();
+
       socket.emit("message:send", savedMessage);
+
+      try {
+        const notificationResponse = await createNotification({
+          userId: receiverId,
+          title: "Mensaje nuevo",
+          message: `${currentUser?.name || "Alguien"} te envió un mensaje.`,
+          type: "message",
+          priority: "Media",
+          relatedType: "message",
+          relatedId: savedMessage._id,
+          metadata: {
+            senderId: currentUserId,
+            senderName: currentUser?.name || "Usuario",
+            receiverId,
+          },
+        });
+
+        const createdNotification =
+          notificationResponse.notification ||
+          notificationResponse.data ||
+          notificationResponse.notificationCreated;
+
+        if (createdNotification) {
+          socket.emit("notification-created", {
+            userId: receiverId,
+            notification: createdNotification,
+          });
+        }
+      } catch (notificationError) {
+        console.error("Error creando notificación:", notificationError);
+      }
 
       await loadConversations();
     } catch (error) {
