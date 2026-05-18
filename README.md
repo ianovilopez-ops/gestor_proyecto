@@ -1,7 +1,7 @@
 # 🚀 NexusFlow - Plataforma de Gestión de Proyectos
 
 <p align="center">
-  <img src="./frontend/src/assets/PantallaInicial.png" width="180">
+  <img src="./frontend/src/assets/PantallaInicial.png" width="300">
 </p>
 
 <p align="center">
@@ -95,7 +95,7 @@ NexusFlow/
 ## Clonar repositorio
 
 ```bash
-git clone https://github.com/TU-USUARIO/nexusflow.git
+git clone https://github.com/ianovilopez-ops/gestor_proyecto.git
 cd nexusflow
 ```
 
@@ -156,6 +156,10 @@ docker compose up --build
 ## Ajustes
 <img src="./frontend/src/assets/Ajustes_perfil.png>
 
+
+## Ajustes
+<img src="./frontend/src/assets/Notificaciones_boton.png>
+
 ## Ajustes/apariencia
 <img src="./frontend/src/assets/Ajustes_apariencia.png>
 
@@ -208,8 +212,6 @@ docker compose down
 
 Funciones futuras:
 
-- Videollamadas
-- IA para productividad
 - Integración con GitHub
 - Calendario colaborativo
 - Kanban avanzado
